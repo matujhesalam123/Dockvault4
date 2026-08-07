@@ -905,10 +905,16 @@
       });
 
       document.getElementById('btnStartUpload').disabled = false;
+      // भविष्य में दोबारा उसी फ़ाइल को चुनने हेतु इनपुट रीसेट
+      e.target.value = '';
     }
 
     async function processModalUpload() {
       if (!selectedUploadFiles.length) return;
+
+      const btnUpload = document.getElementById('btnStartUpload');
+      btnUpload.disabled = true;
+      btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> अपलोड हो रहा है...';
 
       const password = document.getElementById('uploadPasswordInput').value.trim() || null;
       const expiryChoice = document.getElementById('uploadExpirySelect').value;
@@ -932,6 +938,9 @@
 
           const docId = 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
           
+          // फ़ाइल को सुरक्षित तरीके से ArrayBuffer में बदलें (ब्राउज़र क्लोनिंग समस्या से बचाव)
+          const fileBuffer = await file.arrayBuffer();
+
           let sharedKey = null;
           if (password || expiresAt) {
             sharedKey = 'share_' + Math.random().toString(36).substr(2, 9);
@@ -944,7 +953,6 @@
             });
           }
 
-          // Directly store the File/Blob in IndexedDB
           const newDoc = {
             id: docId,
             name: file.name,
@@ -956,7 +964,7 @@
             sharedKey: sharedKey,
             password: password,
             expiresAt: expiresAt,
-            content: file
+            content: fileBuffer
           };
 
           await db.files.put(newDoc);
@@ -967,7 +975,10 @@
         await loadFilesFromDB();
       } catch (err) {
         console.error("Upload Error:", err);
-        showToast("अपलोड में त्रुटि: " + err.message, "error");
+        showToast("अपलोड में त्रुटि: " + (err.message || err), "error");
+      } finally {
+        btnUpload.disabled = false;
+        btnUpload.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> सहेजें व अपलोड करें';
       }
     }
 
