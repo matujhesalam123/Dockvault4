@@ -107,7 +107,7 @@
           <span class="hidden sm:inline">स्मार्ट बोर्ड</span>
         </button>
         
-        <button onclick="triggerDirectUpload()" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-3.5 py-2 rounded-xl text-sm shadow-md transition flex items-center gap-2">
+        <button onclick="openUploadModal()" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-3.5 py-2 rounded-xl text-sm shadow-md transition flex items-center gap-2">
           <i class="fa-solid fa-cloud-arrow-up"></i>
           <span class="hidden sm:inline">अपलोड</span>
         </button>
@@ -187,7 +187,7 @@
       <!-- क्विक एक्शन बैनर -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <!-- ड्रॉपज़ोन कार्ड -->
-        <div id="dropzone" onclick="triggerDirectUpload()" class="glass-card border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-2xl p-6 text-center cursor-pointer transition group flex flex-col items-center justify-center">
+        <div id="dropzone" onclick="openUploadModal()" class="glass-card border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-2xl p-6 text-center cursor-pointer transition group flex flex-col items-center justify-center">
           <div class="w-12 h-12 rounded-full bg-slate-800 group-hover:bg-cyan-500/10 flex items-center justify-center mb-2 transition">
             <i class="fa-solid fa-cloud-arrow-up text-2xl text-cyan-400 group-hover:scale-110 transition"></i>
           </div>
@@ -230,8 +230,8 @@
     </main>
   </div>
 
-  <!-- 0. ऑनलाइन स्मार्ट बोर्ड मोडल (Online Smartboard Modal) -->
-  <div id="smartboardModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 hidden flex flex-col">
+  <!-- 0. ऑनलाइन स्मार्ट बोर्ड मोडल (Online Smartboard Modal - Higher Z-Index for Streaming Support) -->
+  <div id="smartboardModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[60] hidden flex flex-col">
     
     <!-- स्मार्ट बोर्ड टूलबार हेडर -->
     <div class="glass-card border-b border-slate-800 p-3 flex flex-wrap items-center justify-between gap-3">
@@ -243,95 +243,60 @@
           <span class="font-bold text-sm text-slate-100 hidden sm:inline">स्मार्ट बोर्ड</span>
         </div>
 
-        <!-- टूल्स बटन ग्रुप -->
-        <div class="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
-          <button onclick="setBoardTool('pen')" id="tool-pen" class="sb-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-400 bg-slate-700 transition" title="पेन (Freehand Pen)">
-            <i class="fa-solid fa-pen"></i>
-          </button>
-          <button onclick="setBoardTool('eraser')" id="tool-eraser" class="sb-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition" title="इरेज़र (Eraser)">
-            <i class="fa-solid fa-eraser"></i>
-          </button>
-          <button onclick="setBoardTool('line')" id="tool-line" class="sb-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition" title="रेखा (Line)">
-            <i class="fa-solid fa-slash"></i>
-          </button>
-          <button onclick="setBoardTool('rect')" id="tool-rect" class="sb-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition" title="आयत (Rectangle)">
-            <i class="fa-regular fa-square"></i>
-          </button>
-          <button onclick="setBoardTool('circle')" id="tool-circle" class="sb-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition" title="वृत्त (Circle)">
-            <i class="fa-regular fa-circle"></i>
-          </button>
-          <button onclick="setBoardTool('text')" id="tool-text" class="sb-tool-btn px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 transition" title="टेक्स्ट (Text)">
-            <i class="fa-solid fa-font"></i>
-          </button>
+  <!-- 1. नया एडवांस्ड फ़ाइल अपलोड मोडल (Password & Expiry Options Included) -->
+  <div id="uploadModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[70] hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-lg w-full rounded-2xl p-6 space-y-5 border border-slate-700">
+      <div class="flex items-center justify-between">
+        <h3 class="font-semibold text-lg text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-cloud-arrow-up text-cyan-400"></i> नई फ़ाइल अपलोड करें
+        </h3>
+        <button onclick="closeUploadModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-4">
+        <input type="file" id="modalFileInput" multiple onchange="handleModalFileSelect(event)" class="hidden">
+        
+        <div onclick="document.getElementById('modalFileInput').click()" class="border-2 border-dashed border-slate-700 hover:border-cyan-500 rounded-xl p-6 text-center cursor-pointer bg-slate-800/40 transition">
+          <i class="fa-solid fa-folder-open text-3xl text-cyan-400 mb-2"></i>
+          <p class="text-sm font-medium text-slate-200">फ़ाइल चुनें (Choose Files)</p>
+          <p class="text-xs text-slate-400 mt-0.5">PDF, Word, Excel, PPT, Image, Audio, Video</p>
         </div>
 
-        <!-- इम्पॉर्ट फाइल बटन (PDF, DOC, Image directly into board) -->
-        <div class="flex items-center gap-1.5">
-          <input type="file" id="sbDirectImportInput" accept="image/*,.pdf,.doc,.docx,.txt" onchange="handleSbDirectImport(event)" class="hidden">
-          <button onclick="document.getElementById('sbDirectImportInput').click()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-medium border border-indigo-400/30 flex items-center gap-1.5 shadow transition" title="PDF, DOC या फोटो लाएं">
-            <i class="fa-solid fa-file-import text-amber-300"></i>
-            <span>PDF / DOC / फोटो लाएं</span>
-          </button>
-          <button onclick="toggleBoardWebcamOverlay()" id="btnBoardWebcam" class="bg-rose-900/50 hover:bg-rose-800 text-rose-300 px-2.5 py-1.5 rounded-xl text-xs font-medium border border-rose-500/30 flex items-center gap-1 transition" title="स्मार्ट बोर्ड पर लाइव कैमरा चालू करें">
-            <i class="fa-solid fa-video"></i>
-            <span class="hidden md:inline">कैमरा ओवरले</span>
-          </button>
-        </div>
+        <div id="selectedFilesList" class="max-h-32 overflow-y-auto space-y-1.5 text-xs"></div>
 
-        <!-- कलर स्वॉचेस -->
-        <div class="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
-          <button onclick="setBoardColor('#38bdf8')" class="w-5 h-5 rounded-full bg-sky-400 border border-white/20"></button>
-          <button onclick="setBoardColor('#4ade80')" class="w-5 h-5 rounded-full bg-green-400 border border-white/20"></button>
-          <button onclick="setBoardColor('#facc15')" class="w-5 h-5 rounded-full bg-yellow-400 border border-white/20"></button>
-          <button onclick="setBoardColor('#f87171')" class="w-5 h-5 rounded-full bg-red-400 border border-white/20"></button>
-          <button onclick="setBoardColor('#ffffff')" class="w-5 h-5 rounded-full bg-white border border-white/20"></button>
-          <input type="color" id="boardColorPicker" value="#38bdf8" onchange="setBoardColor(this.value)" class="w-6 h-6 rounded bg-transparent cursor-pointer border-0 p-0">
-        </div>
+        <!-- सुरक्षा सेटिंग्स (Password & Expiry Options) -->
+        <div class="pt-3 border-t border-slate-800 space-y-3">
+          <span class="text-xs font-semibold text-amber-400 uppercase tracking-wider block">
+            <i class="fa-solid fa-shield-halved mr-1"></i> अपलोड सुरक्षा एवं एक्सपाईरी सेटिंग्स:
+          </span>
 
-        <!-- स्ट्रोक साइज -->
-        <div class="flex items-center gap-2 bg-slate-800/80 px-2 py-1 rounded-xl border border-slate-700/60 text-xs">
-          <i class="fa-solid fa-circle text-[8px] text-slate-400"></i>
-          <input type="range" id="boardLineWidth" min="1" max="25" value="3" oninput="updateLineWidth(this.value)" class="w-16 accent-emerald-400 cursor-pointer">
-          <span id="lineWidthVal" class="text-slate-300 font-mono text-[10px]">3px</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="block text-slate-400 mb-1">सुरक्षा पासवर्ड/पिन (वैकल्पिक)</label>
+              <input type="password" id="uploadPasswordInput" placeholder="गुप्त पासवर्ड रखें..." 
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+
+            <div>
+              <label class="block text-slate-400 mb-1">समय सीमा (Expiry Duration)</label>
+              <select id="uploadExpirySelect" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+                <option value="never" selected>कभी नहीं (No Expiry)</option>
+                <option value="1h">1 घंटा (1 Hour)</option>
+                <option value="24h">24 घंटे (24 Hours)</option>
+                <option value="7d">7 दिन (7 Days)</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- दायाँ एक्शन समूह: बैकग्राउंड, पेज नेविगेशन, एक्शन व सेव -->
-      <div class="flex items-center gap-2">
-        <!-- PDF / Multi-page नेविगेशन (यदि PDF लोड है) -->
-        <div id="pdfSbControls" class="hidden flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-xl border border-slate-700 text-xs">
-          <button onclick="changeSbPdfPage(-1)" class="px-1.5 py-0.5 text-slate-300 hover:text-white"><i class="fa-solid fa-chevron-left"></i></button>
-          <span id="sbPdfPageNum" class="text-cyan-400 font-mono">1 / 1</span>
-          <button onclick="changeSbPdfPage(1)" class="px-1.5 py-0.5 text-slate-300 hover:text-white"><i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-
-        <!-- बैकग्राउंड पैटर्न चयन -->
-        <select id="boardBgStyle" onchange="changeBoardBackground(this.value)" class="bg-slate-800 border border-slate-700 text-xs text-slate-200 px-2.5 py-1.5 rounded-xl focus:outline-none">
-          <option value="grid">ग्रिड बैकग्राउंड</option>
-          <option value="dots">डॉटेड बैकग्राउंड</option>
-          <option value="plain">प्लेन डार्क</option>
-        </select>
-
-        <button onclick="clearSmartboard()" class="bg-rose-900/40 hover:bg-rose-800/60 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-medium transition" title="बोर्ड साफ करें">
-          <i class="fa-solid fa-trash mr-1"></i> साफ़ करें
+      <div class="flex justify-end gap-3 pt-2">
+        <button onclick="closeUploadModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:bg-slate-800 transition">रद्द करें</button>
+        <button onclick="processModalUpload()" id="btnStartUpload" disabled class="px-5 py-2 rounded-xl text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white shadow transition">
+          <i class="fa-solid fa-floppy-disk mr-1"></i> सहेजें व अपलोड करें
         </button>
-
-        <button onclick="saveSmartboardToVault()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium px-3.5 py-1.5 rounded-xl text-xs shadow transition flex items-center gap-1.5">
-          <i class="fa-solid fa-floppy-disk"></i>
-          <span>वॉल्ट में सहेजें</span>
-        </button>
-
-        <button onclick="closeSmartboardModal()" class="text-slate-400 hover:text-white p-1.5 text-lg ml-2"><i class="fa-solid fa-xmark"></i></button>
       </div>
-
     </div>
-
-    <!-- स्मार्ट बोर्ड कैनवास मुख्य क्षेत्र -->
-    <div id="boardCanvasContainer" class="flex-1 relative overflow-hidden bg-grid-pattern cursor-crosshair flex items-center justify-center">
-      <video id="sbWebcamVideo" autoplay muted playsinline class="hidden absolute top-4 right-4 w-48 h-36 rounded-xl border-2 border-emerald-500 shadow-2xl z-20 object-cover bg-black"></video>
-      <canvas id="smartboardCanvas" class="touch-none"></canvas>
-    </div>
-
   </div>
 
   <!-- 6. लाइव स्ट्रीमिंग व ब्रॉडकास्टिंग मोडल (Live Stream Modal) -->
@@ -639,7 +604,8 @@
     // --- 2. फ़ाइल लोड एवं फ़िल्टर लॉजिक ---
     async function loadFilesFromDB() {
       try {
-        allFiles = await db.files.orderBy('updatedAt').reverse().toArray();
+        const rawFiles = await db.files.toArray();
+        allFiles = rawFiles.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
         updateCategoryCounts();
         renderFileList();
         updateStorageStats();
@@ -691,82 +657,114 @@
           list = list.filter(f => f.category === currentCategory);
         }
       }
+    // --- 3. नया अपलोड मोडल व सेव हैंडलर (With Password & Expiry) ---
+    function openUploadModal() {
+      selectedUploadFiles = [];
+      document.getElementById('selectedFilesList').innerHTML = '';
+      document.getElementById('uploadPasswordInput').value = '';
+      document.getElementById('uploadExpirySelect').value = 'never';
+      document.getElementById('btnStartUpload').disabled = true;
+      document.getElementById('uploadModal').classList.remove('hidden');
+    }
 
-      document.getElementById('fileCountBadge').innerText = `${list.length} फ़ाइलें मिलीं`;
+    function closeUploadModal() {
+      document.getElementById('uploadModal').classList.add('hidden');
+    }
 
-      if (list.length === 0) {
-        emptyState.classList.remove('hidden');
-        return;
-      } else {
-        emptyState.classList.add('hidden');
-      }
+    function handleModalFileSelect(e) {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+      selectedUploadFiles = files;
 
-      list.forEach(file => {
-        const card = document.createElement('div');
-        card.className = "glass-card rounded-2xl p-4 flex flex-col justify-between hover:border-slate-600 transition group relative";
+      const listContainer = document.getElementById('selectedFilesList');
+      listContainer.innerHTML = '';
 
-        const iconData = getFileIcon(file.ext, file.category);
-        const formattedSize = formatBytes(file.size);
-        const formattedDate = new Date(file.updatedAt).toLocaleDateString('hi-IN', { day: 'numeric', month: 'short' });
-
-        card.innerHTML = `
-          <div>
-            <div class="flex items-start justify-between gap-2 mb-3">
-              <div class="w-10 h-10 rounded-xl ${iconData.bg} ${iconData.color} flex items-center justify-center text-lg flex-shrink-0">
-                <i class="${iconData.icon}"></i>
-              </div>
-              <div class="flex items-center gap-1">
-                ${file.sharedKey ? '<span class="text-amber-400 text-xs" title="शेयर की गई फ़ाइल"><i class="fa-solid fa-share-nodes"></i></span>' : ''}
-                <button onclick="openShareModal('${file.id}')" class="text-slate-400 hover:text-amber-400 p-1.5 text-xs rounded-lg hover:bg-slate-800 transition" title="शेयर करें">
-                  <i class="fa-solid fa-share-nodes"></i>
-                </button>
-                <button onclick="deleteFile('${file.id}')" class="text-slate-400 hover:text-rose-400 p-1.5 text-xs rounded-lg hover:bg-slate-800 transition" title="हटाएं">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
-              </div>
-            </div>
-
-            <h4 class="font-medium text-slate-200 text-sm truncate mb-1" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</h4>
-            <p class="text-xs text-slate-400">${(file.ext || '').toUpperCase()} • ${formattedSize} • ${formattedDate}</p>
-          </div>
-
-          <div class="flex items-center gap-2 mt-4 pt-3 border-t border-slate-800">
-            <button onclick="openViewer('${file.id}')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-medium py-1.5 rounded-xl transition flex items-center justify-center gap-1">
-              <i class="fa-solid fa-eye"></i> देखें / एडिट
-            </button>
-            <button onclick="downloadFile('${file.id}')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-xl text-xs transition" title="डाउनलोड">
-              <i class="fa-solid fa-download"></i>
-            </button>
-          </div>
+      files.forEach((f) => {
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between p-2 bg-slate-800/80 rounded-xl border border-slate-700/60";
+        item.innerHTML = `
+          <span class="truncate font-medium text-slate-200">${escapeHtml(f.name)}</span>
+          <span class="text-slate-400 font-mono ml-2 flex-shrink-0">${formatBytes(f.size)}</span>
         `;
-        grid.appendChild(card);
+        listContainer.appendChild(item);
       });
+
+      document.getElementById('btnStartUpload').disabled = false;
     }
 
-    function getFileIcon(ext, category) {
-      ext = (ext || '').toLowerCase();
-      if (category === 'smartboard') return { icon: 'fa-solid fa-chalkboard-user', color: 'text-emerald-400', bg: 'bg-emerald-500/10' };
-      if (['pdf'].includes(ext)) return { icon: 'fa-solid fa-file-pdf', color: 'text-rose-400', bg: 'bg-rose-500/10' };
-      if (['doc', 'docx'].includes(ext)) return { icon: 'fa-solid fa-file-word', color: 'text-blue-400', bg: 'bg-blue-500/10' };
-      if (['xls', 'xlsx', 'csv'].includes(ext)) return { icon: 'fa-solid fa-file-excel', color: 'text-emerald-400', bg: 'bg-emerald-500/10' };
-      if (['ppt', 'pptx'].includes(ext)) return { icon: 'fa-solid fa-file-powerpoint', color: 'text-orange-400', bg: 'bg-orange-500/10' };
-      if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) return { icon: 'fa-solid fa-file-image', color: 'text-purple-400', bg: 'bg-purple-500/10' };
-      if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) return { icon: 'fa-solid fa-file-audio', color: 'text-amber-400', bg: 'bg-amber-500/10' };
-      if (['mp4', 'webm', 'mkv'].includes(ext)) return { icon: 'fa-solid fa-file-video', color: 'text-pink-400', bg: 'bg-pink-500/10' };
-      return { icon: 'fa-solid fa-file-lines', color: 'text-cyan-400', bg: 'bg-cyan-500/10' };
+    async function processModalUpload() {
+      if (!selectedUploadFiles.length) return;
+
+      const password = document.getElementById('uploadPasswordInput').value.trim() || null;
+      const expiryChoice = document.getElementById('uploadExpirySelect').value;
+
+      let expiresAt = null;
+      const now = Date.now();
+      if (expiryChoice === '1h') expiresAt = now + 3600000;
+      else if (expiryChoice === '24h') expiresAt = now + 86400000;
+      else if (expiryChoice === '7d') expiresAt = now + 604800000;
+
+      showToast(`${selectedUploadFiles.length} फ़ाइलें सुरक्षित सहेजी जा रही हैं...`, "info");
+
+      try {
+        for (const file of selectedUploadFiles) {
+          const ext = file.name.split('.').pop().toLowerCase();
+          let category = 'document';
+          
+          if (['xls', 'xlsx', 'csv'].includes(ext)) category = 'spreadsheet';
+          else if (['ppt', 'pptx'].includes(ext)) category = 'presentation';
+          else if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'mp3', 'wav', 'ogg', 'mp4', 'webm', 'mkv', 'm4a'].includes(ext)) category = 'media';
+
+          const fileData = await readFileAsArrayBuffer(file);
+          const docId = 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+          
+          let sharedKey = null;
+          if (password || expiresAt) {
+            sharedKey = 'share_' + Math.random().toString(36).substr(2, 9);
+            await db.sharedData.put({
+              id: sharedKey,
+              fileId: docId,
+              password: password,
+              expiresAt: expiresAt,
+              payload: { name: file.name, ext: ext, size: file.size, type: file.type }
+            });
+          }
+
+          const newDoc = {
+            id: docId,
+            name: file.name,
+            ext: ext,
+            category: category,
+            size: file.size,
+            type: file.type || 'application/octet-stream',
+            updatedAt: Date.now(),
+            sharedKey: sharedKey,
+            password: password,
+            expiresAt: expiresAt,
+            content: fileData
+          };
+
+          await db.files.put(newDoc);
+        }
+
+        showToast("फ़ाइलें सफलतापूर्वक सहेजी गईं!", "success");
+        closeUploadModal();
+        await loadFilesFromDB();
+      } catch (err) {
+        showToast("अपलोड में त्रुटि: " + err.message, "error");
+      }
     }
 
-    // --- 3. ड्रॉपज़ोन व अपलोड हैंडलर ---
     function triggerDirectUpload() {
-      const input = document.getElementById('directFileInput');
-      input.value = '';
-      input.click();
+      openUploadModal();
     }
 
     async function handleDirectFileSelect(e) {
       const files = Array.from(e.target.files);
       if (!files.length) return;
-      await uploadFilesToDatabase(files);
+      selectedUploadFiles = files;
+      openUploadModal();
+      handleModalFileSelect(e);
     }
 
     function setupDragAndDrop() {
@@ -789,43 +787,11 @@
         const dt = e.dataTransfer;
         const files = dt.files;
         if (files.length) {
-          await uploadFilesToDatabase(Array.from(files));
+          selectedUploadFiles = Array.from(files);
+          openUploadModal();
+          handleModalFileSelect({ target: { files: files } });
         }
       });
-    }
-
-    async function uploadFilesToDatabase(filesList) {
-      showToast(`${filesList.length} फ़ाइलें अपलोड हो रही हैं...`, "info");
-      try {
-        for (const file of filesList) {
-          const ext = file.name.split('.').pop().toLowerCase();
-          let category = 'document';
-          
-          if (['xls', 'xlsx', 'csv'].includes(ext)) category = 'spreadsheet';
-          else if (['ppt', 'pptx'].includes(ext)) category = 'presentation';
-          else if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'mp3', 'wav', 'ogg', 'mp4', 'webm', 'mkv', 'm4a'].includes(ext)) category = 'media';
-
-          const fileData = await readFileAsArrayBuffer(file);
-
-          const newDoc = {
-            id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-            name: file.name,
-            ext: ext,
-            category: category,
-            size: file.size,
-            type: file.type || 'application/octet-stream',
-            updatedAt: Date.now(),
-            content: fileData
-          };
-
-          await db.files.put(newDoc);
-        }
-
-        showToast("फ़ाइलें सफलतापूर्वक सहेजी गईं!", "success");
-        await loadFilesFromDB();
-      } catch (err) {
-        showToast("अपलोड करने में त्रुटि: " + err.message, "error");
-      }
     }
 
     // --- 4. ऑनलाइन व्यूअर व एडिटर (Universal Viewer) ---
@@ -1362,6 +1328,19 @@
     function openLiveStreamModal() {
       document.getElementById('liveStreamModal').classList.remove('hidden');
       const shareUrl = `${window.location.origin}${window.location.pathname}#livestream=${Math.random().toString(36).substr(2, 8)}`;
+    // --- 6. लाइव स्ट्रीमिंग व स्क्रीन शेयरिंग सेंटर (With Robust Recording) ---
+    let liveStreamMedia = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let streamTimerInterval = null;
+    let streamSeconds = 0;
+    let isMicEnabled = true;
+    let isCamEnabled = true;
+    let activeStreamType = null;
+
+    function openLiveStreamModal() {
+      document.getElementById('liveStreamModal').classList.remove('hidden');
+      const shareUrl = `${window.location.origin}${window.location.pathname}#livestream=${Math.random().toString(36).substr(2, 8)}`;
       document.getElementById('liveStreamShareUrl').value = shareUrl;
     }
 
@@ -1374,7 +1353,6 @@
       stopLiveStream(false);
       activeStreamType = type;
 
-      // बटन हाइलाइट अपडेट करें
       document.querySelectorAll('.stream-src-btn').forEach(btn => {
         btn.classList.remove('ring-2', 'ring-cyan-400', 'scale-105');
       });
@@ -1396,6 +1374,7 @@
         } else if (type === 'board') {
           if (!sbCanvas) initSmartboard();
           resizeCanvas();
+          openSmartboardModal();
           const canvasStream = sbCanvas.captureStream(30);
           try {
             const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1443,47 +1422,34 @@
       stopStreamTimer();
     }
 
-    function toggleStreamMic() {
-      if (!liveStreamMedia) return;
-      const audioTrack = liveStreamMedia.getAudioTracks()[0];
-      if (audioTrack) {
-        isMicEnabled = !isMicEnabled;
-        audioTrack.enabled = isMicEnabled;
-        const btn = document.getElementById('btnStreamMic');
-        btn.innerHTML = isMicEnabled ? '<i class="fa-solid fa-microphone"></i> चालू' : '<i class="fa-solid fa-microphone-slash text-rose-400"></i> बंद';
-      }
-    }
-
-    function toggleStreamCam() {
-      if (!liveStreamMedia) return;
-      const videoTrack = liveStreamMedia.getVideoTracks()[0];
-      if (videoTrack) {
-        isCamEnabled = !isCamEnabled;
-        videoTrack.enabled = isCamEnabled;
-        const btn = document.getElementById('btnStreamCam');
-        btn.innerHTML = isCamEnabled ? '<i class="fa-solid fa-video"></i> चालू' : '<i class="fa-solid fa-video-slash text-rose-400"></i> बंद';
-      }
-    }
-
     function toggleStreamRecording() {
       const btn = document.getElementById('btnToggleRecord');
       if (!mediaRecorder || mediaRecorder.state === 'inactive') {
         if (!liveStreamMedia) return;
         recordedChunks = [];
         
-        let options = { mimeType: 'video/webm' };
-        if (!MediaRecorder.isTypeSupported('video/webm')) {
-          options = {};
+        let mimeType = 'video/webm';
+        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
+          mimeType = 'video/webm;codecs=vp9,opus';
+        } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) {
+          mimeType = 'video/webm;codecs=vp8,opus';
+        } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+          mimeType = 'video/mp4';
         }
 
-        mediaRecorder = new MediaRecorder(liveStreamMedia, options);
+        try {
+          mediaRecorder = new MediaRecorder(liveStreamMedia, { mimeType: mimeType });
+        } catch(e) {
+          mediaRecorder = new MediaRecorder(liveStreamMedia);
+        }
 
         mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) recordedChunks.push(e.data);
+          if (e.data && e.data.size > 0) recordedChunks.push(e.data);
         };
 
         mediaRecorder.onstop = async () => {
-          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          if (!recordedChunks.length) return;
+          const blob = new Blob(recordedChunks, { type: mimeType });
           const arrayBuffer = await blob.arrayBuffer();
           const fileName = `Live_Stream_Record_${new Date().toISOString().slice(0, 10)}_${Math.floor(Math.random() * 1000)}.webm`;
 
@@ -1503,7 +1469,7 @@
           await loadFilesFromDB();
         };
 
-        mediaRecorder.start();
+        mediaRecorder.start(1000); // Record in 1-second chunks
         btn.innerHTML = '<i class="fa-solid fa-stop text-rose-400"></i> रिकॉर्डिंग रोकें';
         btn.classList.add('border-rose-500');
         showToast("रिकॉर्डिंग (REC) शुरू हुई...", "info");
