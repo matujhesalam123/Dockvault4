@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DocVault AI - मीडिया, डॉक्यूमेंट एवं स्मार्ट बोर्ड हब</title>
-  
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -243,6 +243,90 @@
           <span class="font-bold text-sm text-slate-100 hidden sm:inline">स्मार्ट बोर्ड</span>
         </div>
 
+        <!-- टूल बटन समूह -->
+        <div class="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+          <button onclick="setBoardTool('pen')" id="tool-pen" class="sb-tool-btn p-2 rounded-lg text-emerald-400 bg-slate-700 hover:text-emerald-300 text-xs transition" title="पेन/पेंसिल">
+            <i class="fa-solid fa-pen-nib"></i>
+          </button>
+          <button onclick="setBoardTool('eraser')" id="tool-eraser" class="sb-tool-btn p-2 rounded-lg text-slate-400 hover:text-emerald-300 text-xs transition" title="इरेज़र/रबड़">
+            <i class="fa-solid fa-eraser"></i>
+          </button>
+          <button onclick="setBoardTool('line')" id="tool-line" class="sb-tool-btn p-2 rounded-lg text-slate-400 hover:text-emerald-300 text-xs transition" title="सीधी रेखा">
+            <i class="fa-solid fa-slash"></i>
+          </button>
+          <button onclick="setBoardTool('rect')" id="tool-rect" class="sb-tool-btn p-2 rounded-lg text-slate-400 hover:text-emerald-300 text-xs transition" title="आयत (Rectangle)">
+            <i class="fa-regular fa-square"></i>
+          </button>
+          <button onclick="setBoardTool('circle')" id="tool-circle" class="sb-tool-btn p-2 rounded-lg text-slate-400 hover:text-emerald-300 text-xs transition" title="वृत्त (Circle)">
+            <i class="fa-regular fa-circle"></i>
+          </button>
+          <button onclick="setBoardTool('text')" id="tool-text" class="sb-tool-btn p-2 rounded-lg text-slate-400 hover:text-emerald-300 text-xs transition" title="टेक्स्ट लिखें">
+            <i class="fa-solid fa-font"></i>
+          </button>
+        </div>
+
+        <!-- रंग एवं मोटाई नियंत्रक -->
+        <div class="flex items-center gap-2 bg-slate-800/80 p-1 px-2 rounded-xl border border-slate-700/60 text-xs">
+          <input type="color" id="boardColorPicker" onchange="setBoardColor(this.value)" value="#38bdf8" class="w-6 h-6 rounded border-0 cursor-pointer bg-transparent">
+          <div class="flex items-center gap-1">
+            <i class="fa-solid fa-circle-notch text-[10px] text-slate-400"></i>
+            <input type="range" min="1" max="20" value="3" oninput="updateLineWidth(this.value)" class="w-16 accent-emerald-500 cursor-pointer">
+            <span id="lineWidthVal" class="text-[10px] text-slate-400 w-6">3px</span>
+          </div>
+        </div>
+
+        <!-- बैकग्राउंड शैली -->
+        <select onchange="changeBoardBackground(this.value)" class="bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+          <option value="dark">डार्क पृष्ठभूमि</option>
+          <option value="grid">ग्रिड (Graph Paper)</option>
+          <option value="dots">डॉटेड पैटर्न</option>
+        </select>
+      </div>
+
+      <!-- दायाँ टूल समूह: इम्पॉर्ट, सेव, वेबकैम एवं क्लोज -->
+      <div class="flex items-center gap-2">
+        <input type="file" id="sbImportFileInput" accept="image/*,.pdf,.doc,.docx,.txt" onchange="handleSbDirectImport(event)" class="hidden">
+        
+        <button onclick="document.getElementById('sbImportFileInput').click()" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-file-import"></i>
+          <span class="hidden md:inline">PDF / DOC / फोटो लाएं</span>
+        </button>
+
+        <button onclick="toggleBoardWebcamOverlay()" class="bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-video"></i>
+          <span class="hidden md:inline">टीचर कैमरा ओवरले</span>
+        </button>
+
+        <button onclick="saveSmartboardToVault()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1">
+          <i class="fa-solid fa-floppy-disk"></i> सहेजें
+        </button>
+
+        <button onclick="clearSmartboard()" class="bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-medium transition" title="बोर्ड साफ करें">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+
+        <button onclick="closeSmartboardModal()" class="text-slate-400 hover:text-white p-2 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+    </div>
+
+    <!-- स्मार्ट बोर्ड मुख्य कैनवास एरिया -->
+    <div id="boardCanvasContainer" class="flex-1 relative overflow-hidden bg-slate-950 cursor-crosshair flex items-center justify-center">
+      <canvas id="smartboardCanvas" class="block w-full h-full"></canvas>
+      
+      <!-- फ़्लोटिंग पिक्चर-इन-पिक्चर टीचर वेबकैम ओवरले -->
+      <video id="sbWebcamVideo" autoplay muted class="hidden absolute bottom-4 right-4 w-40 h-28 object-cover rounded-xl border-2 border-emerald-500 shadow-2xl z-20"></video>
+
+      <!-- PDF पेज नेविगेशन कंट्रोल्स (PDF इम्पॉर्ट होने पर दिखता है) -->
+      <div id="pdfSbControls" class="hidden absolute top-4 right-4 bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-xl text-xs flex items-center gap-3 z-20">
+        <button onclick="changeSbPdfPage(-1)" class="hover:text-emerald-400"><i class="fa-solid fa-chevron-left"></i> पिछला</button>
+        <span id="sbPdfPageNum" class="font-mono text-emerald-400 font-bold">1 / 1</span>
+        <button onclick="changeSbPdfPage(1)" class="hover:text-emerald-400">अगला <i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+    </div>
+
+  </div>
+
   <!-- 1. नया एडवांस्ड फ़ाइल अपलोड मोडल (Password & Expiry Options Included) -->
   <div id="uploadModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[70] hidden flex items-center justify-center p-4">
     <div class="glass-card max-w-lg w-full rounded-2xl p-6 space-y-5 border border-slate-700">
@@ -379,16 +463,6 @@
             <div>
               <label class="block text-slate-400 mb-1">स्ट्रीम शीर्षक (Title)</label>
               <input type="text" id="streamTitleInput" value="DocVault AI - लाइव क्लास व प्रेजेंटेशन" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-cyan-500">
-            </div>
-
-            <div class="flex items-center justify-between bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
-              <span class="text-slate-300">माइक (Audio):</span>
-              <button onclick="toggleStreamMic()" id="btnStreamMic" class="text-emerald-400 font-medium px-2 py-1 rounded bg-slate-700"><i class="fa-solid fa-microphone"></i> चालू</button>
-            </div>
-
-            <div class="flex items-center justify-between bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
-              <span class="text-slate-300">कैमरा (Video):</span>
-              <button onclick="toggleStreamCam()" id="btnStreamCam" class="text-emerald-400 font-medium px-2 py-1 rounded bg-slate-700"><i class="fa-solid fa-video"></i> चालू</button>
             </div>
           </div>
         </div>
@@ -657,6 +731,71 @@
           list = list.filter(f => f.category === currentCategory);
         }
       }
+
+      document.getElementById('fileCountBadge').innerText = `${list.length} फ़ाइलें मिलीं`;
+
+      if (list.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      list.forEach(file => {
+        const card = document.createElement('div');
+        card.className = "glass-card rounded-2xl p-4 flex flex-col justify-between hover:border-slate-600 transition group relative";
+
+        const iconData = getFileIcon(file.ext, file.category);
+        const formattedSize = formatBytes(file.size);
+        const formattedDate = new Date(file.updatedAt || Date.now()).toLocaleDateString('hi-IN', { day: 'numeric', month: 'short' });
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-3">
+              <div class="w-10 h-10 rounded-xl ${iconData.bg} ${iconData.color} flex items-center justify-center text-lg flex-shrink-0">
+                <i class="${iconData.icon}"></i>
+              </div>
+              <div class="flex items-center gap-1">
+                ${file.sharedKey ? '<span class="text-amber-400 text-xs" title="सुरक्षित शेयर की गई"><i class="fa-solid fa-share-nodes"></i></span>' : ''}
+                <button onclick="openShareModal('${file.id}')" class="text-slate-400 hover:text-amber-400 p-1.5 text-xs rounded-lg hover:bg-slate-800 transition" title="शेयर करें">
+                  <i class="fa-solid fa-share-nodes"></i>
+                </button>
+                <button onclick="deleteFile('${file.id}')" class="text-slate-400 hover:text-rose-400 p-1.5 text-xs rounded-lg hover:bg-slate-800 transition" title="हटाएं">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <h4 class="font-medium text-slate-200 text-sm truncate mb-1" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</h4>
+            <p class="text-xs text-slate-400">${(file.ext || '').toUpperCase()} • ${formattedSize} • ${formattedDate}</p>
+          </div>
+
+          <div class="flex items-center gap-2 mt-4 pt-3 border-t border-slate-800">
+            <button onclick="openViewer('${file.id}')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-medium py-1.5 rounded-xl transition flex items-center justify-center gap-1">
+              <i class="fa-solid fa-eye"></i> देखें / एडिट
+            </button>
+            <button onclick="downloadFile('${file.id}')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-xl text-xs transition" title="डाउनलोड">
+              <i class="fa-solid fa-download"></i>
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function getFileIcon(ext, cat) {
+      ext = (ext || '').toLowerCase();
+      if (cat === 'smartboard') return { icon: 'fa-solid fa-chalkboard-user', color: 'text-emerald-400', bg: 'bg-emerald-500/10' };
+      if (['pdf'].includes(ext)) return { icon: 'fa-solid fa-file-pdf', color: 'text-rose-400', bg: 'bg-rose-500/10' };
+      if (['doc', 'docx'].includes(ext)) return { icon: 'fa-solid fa-file-word', color: 'text-blue-400', bg: 'bg-blue-500/10' };
+      if (['xls', 'xlsx', 'csv'].includes(ext)) return { icon: 'fa-solid fa-file-excel', color: 'text-emerald-400', bg: 'bg-emerald-500/10' };
+      if (['ppt', 'pptx'].includes(ext)) return { icon: 'fa-solid fa-file-powerpoint', color: 'text-orange-400', bg: 'bg-orange-500/10' };
+      if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) return { icon: 'fa-solid fa-file-image', color: 'text-purple-400', bg: 'bg-purple-500/10' };
+      if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) return { icon: 'fa-solid fa-file-audio', color: 'text-amber-400', bg: 'bg-amber-500/10' };
+      if (['mp4', 'webm', 'mkv'].includes(ext)) return { icon: 'fa-solid fa-file-video', color: 'text-pink-400', bg: 'bg-pink-500/10' };
+      return { icon: 'fa-solid fa-file-lines', color: 'text-cyan-400', bg: 'bg-cyan-500/10' };
+    }
+
     // --- 3. नया अपलोड मोडल व सेव हैंडलर (With Password & Expiry) ---
     function openUploadModal() {
       selectedUploadFiles = [];
@@ -755,16 +894,12 @@
       }
     }
 
-    function triggerDirectUpload() {
-      openUploadModal();
-    }
-
-    async function handleDirectFileSelect(e) {
+    function handleDirectFileSelect(e) {
       const files = Array.from(e.target.files);
       if (!files.length) return;
       selectedUploadFiles = files;
       openUploadModal();
-      handleModalFileSelect(e);
+      handleModalFileSelect({ target: { files: files } });
     }
 
     function setupDragAndDrop() {
@@ -1315,27 +1450,12 @@
       }, 'image/png');
     }
 
-    // --- 6. लाइव स्ट्रीमिंग व स्क्रीन शेयरिंग सेंटर ---
-    let liveStreamMedia = null;
-    let mediaRecorder = null;
-    let recordedChunks = [];
-    let streamTimerInterval = null;
-    let streamSeconds = 0;
-    let isMicEnabled = true;
-    let isCamEnabled = true;
-    let activeStreamType = null;
-
-    function openLiveStreamModal() {
-      document.getElementById('liveStreamModal').classList.remove('hidden');
-      const shareUrl = `${window.location.origin}${window.location.pathname}#livestream=${Math.random().toString(36).substr(2, 8)}`;
     // --- 6. लाइव स्ट्रीमिंग व स्क्रीन शेयरिंग सेंटर (With Robust Recording) ---
     let liveStreamMedia = null;
     let mediaRecorder = null;
     let recordedChunks = [];
     let streamTimerInterval = null;
     let streamSeconds = 0;
-    let isMicEnabled = true;
-    let isCamEnabled = true;
     let activeStreamType = null;
 
     function openLiveStreamModal() {
