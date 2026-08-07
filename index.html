@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DocVault AI - मीडिया, डॉक्यूमेंट एवं स्मार्ट बोर्ड हब</title>
   
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -56,8 +57,6 @@
       backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
-    
-    /* स्मार्ट बोर्ड पैटर्न */
     .bg-grid-pattern {
       background-size: 24px 24px;
       background-image: 
@@ -108,7 +107,7 @@
           <span class="hidden sm:inline">स्मार्ट बोर्ड</span>
         </button>
         
-        <button onclick="openUploadModal()" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-3.5 py-2 rounded-xl text-sm shadow-md transition flex items-center gap-2">
+        <button onclick="triggerDirectUpload()" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-3.5 py-2 rounded-xl text-sm shadow-md transition flex items-center gap-2">
           <i class="fa-solid fa-cloud-arrow-up"></i>
           <span class="hidden sm:inline">अपलोड</span>
         </button>
@@ -120,6 +119,9 @@
       </div>
     </div>
   </header>
+
+  <!-- Hidden direct file input for fast triggering -->
+  <input type="file" id="directFileInput" multiple onchange="handleDirectFileSelect(event)" class="hidden">
 
   <div class="flex-1 flex max-w-7xl w-full mx-auto p-4 gap-6">
 
@@ -180,17 +182,16 @@
 
     </aside>
 
-    <!-- मुख्य सामग्री क्षेत्र -->
     <main class="flex-1 flex flex-col gap-6 min-w-0">
       
       <!-- क्विक एक्शन बैनर -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <!-- ड्रॉपज़ोन कार्ड -->
-        <div id="dropzone" onclick="openUploadModal()" class="glass-card border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-2xl p-6 text-center cursor-pointer transition group flex flex-col items-center justify-center">
+        <div id="dropzone" onclick="triggerDirectUpload()" class="glass-card border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-2xl p-6 text-center cursor-pointer transition group flex flex-col items-center justify-center">
           <div class="w-12 h-12 rounded-full bg-slate-800 group-hover:bg-cyan-500/10 flex items-center justify-center mb-2 transition">
             <i class="fa-solid fa-cloud-arrow-up text-2xl text-cyan-400 group-hover:scale-110 transition"></i>
           </div>
-          <h3 class="font-semibold text-sm text-slate-200">फ़ाइलें अपलोड करें (ड्रैग व ड्रॉप करें)</h3>
+          <h3 class="font-semibold text-sm text-slate-200">फ़ाइलें अपलोड करें (ड्रैग व ड्रॉप या क्लिक करें)</h3>
           <p class="text-xs text-slate-400 mt-0.5">PDF, Word, Excel, PPT, Audio, Video, Image</p>
         </div>
 
@@ -355,7 +356,7 @@
       
       <!-- स्ट्रीम प्रिव्यू बॉक्स -->
       <div class="lg:col-span-2 glass-card rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden bg-slate-950">
-        <div class="relative flex-1 rounded-xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center">
+        <div class="relative flex-1 rounded-xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center min-h-[300px]">
           <video id="liveStreamPreview" autoplay muted playsinline class="w-full h-full object-contain"></video>
           <div id="streamPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 gap-3">
             <i class="fa-solid fa-video-slash text-5xl"></i>
@@ -368,8 +369,8 @@
         </div>
 
         <!-- स्ट्रीम कंट्रोल बटन -->
-        <div class="flex items-center justify-between gap-3 pt-4">
-          <div class="flex items-center gap-2">
+        <div class="flex items-center justify-between gap-3 pt-4 flex-wrap">
+          <div class="flex items-center gap-2 flex-wrap">
             <button onclick="startStreamSource('camera')" class="bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-2 rounded-xl text-xs font-medium flex items-center gap-2 transition">
               <i class="fa-solid fa-camera"></i> वेबकैम + माइक
             </button>
@@ -377,7 +378,7 @@
               <i class="fa-solid fa-desktop"></i> स्क्रीन शेयर
             </button>
             <button onclick="startStreamSource('board')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl text-xs font-medium flex items-center gap-2 transition">
-              <i class="fa-solid fa-chalkboard"></i> स्मार्ट बोर्ड
+              <i class="fa-solid fa-chalkboard"></i> स्मार्ट बोर्ड शेयर
             </button>
           </div>
 
@@ -423,6 +424,132 @@
             <input type="text" id="liveStreamShareUrl" readonly class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-rose-400 font-mono">
             <button onclick="copyLiveStreamUrl()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-xl text-xs font-medium">कॉपी</button>
           </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 2. यूनिवर्सल फ़ाइल व्यूअर व एडिटर मोडल -->
+  <div id="viewerModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex flex-col p-4 md:p-6">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+      <div class="flex items-center gap-3">
+        <span id="viewerFileIcon" class="text-2xl text-cyan-400"><i class="fa-solid fa-file"></i></span>
+        <div>
+          <h3 id="viewerFileName" class="font-semibold text-slate-100 text-base truncate max-w-xs md:max-w-md">filename.ext</h3>
+          <p id="viewerFileMeta" class="text-xs text-slate-400">0 KB • Just now</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="annotateCurrentInSmartboard()" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-chalkboard-user text-amber-300"></i> स्मार्ट बोर्ड पर खोलें
+        </button>
+        <button id="btnSaveViewer" onclick="saveViewerEdits()" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-medium transition">
+          <i class="fa-solid fa-floppy-disk mr-1"></i> सहेजें
+        </button>
+        <button onclick="downloadCurrentViewerFile()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-medium border border-slate-700">
+          <i class="fa-solid fa-download mr-1"></i> डाउनलोड
+        </button>
+        <button onclick="closeViewerModal()" class="text-slate-400 hover:text-white p-2 text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+
+    <div id="viewerBody" class="flex-1 my-4 overflow-auto rounded-xl glass-card p-4 flex items-center justify-center">
+      <!-- Dynamic Viewer Content -->
+    </div>
+  </div>
+
+  <!-- 3. सुरक्षित शेयर लिंक मोडल -->
+  <div id="shareModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full rounded-2xl p-6 space-y-5 border border-slate-700">
+      <div class="flex items-center justify-between">
+        <h3 class="font-semibold text-lg text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-share-nodes text-amber-400"></i> सुरक्षित ऑनलाइन शेयर लिंक
+        </h3>
+        <button onclick="closeShareModal()" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">लिंक की समय सीमा (Expiry Duration)</label>
+          <select id="shareExpirySelect" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+            <option value="1h">1 घंटा (1 Hour)</option>
+            <option value="24h" selected>24 घंटे (24 Hours)</option>
+            <option value="7d">7 दिन (7 Days)</option>
+            <option value="never">कभी नहीं (No Expiry)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">सुरक्षा पासवर्ड/पिन (वैकल्पिक)</label>
+          <input type="password" id="sharePasswordInput" placeholder="पासवर्ड दर्ज करें (खाली छोड़ सकते हैं)" 
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+        </div>
+
+        <button onclick="generateShareLink()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold py-2.5 rounded-xl transition">
+          <i class="fa-solid fa-link mr-1"></i> शेयर लिंक जनरेट करें
+        </button>
+
+        <div id="shareResultArea" class="hidden space-y-4 pt-3 border-t border-slate-800">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">आपकी शेयर योग्य लिंक:</label>
+            <div class="flex items-center gap-2">
+              <input type="text" id="shareGeneratedUrl" readonly class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-amber-400 font-mono">
+              <button onclick="copyShareUrl()" class="bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl text-xs font-medium text-slate-200 border border-slate-700">कॉपी</button>
+            </div>
+          </div>
+
+          <div class="flex flex-col items-center justify-center p-3 bg-white rounded-xl mx-auto w-fit">
+            <div id="qrcode"></div>
+          </div>
+
+          <div class="flex items-center justify-center gap-3">
+            <a id="btnWhatsappShare" href="#" target="_blank" class="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-emerald-500/30">
+              <i class="fa-brands fa-whatsapp"></i> व्हाट्सएप
+            </a>
+            <a id="btnEmailShare" href="#" target="_blank" class="bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-blue-500/30">
+              <i class="fa-solid fa-envelope"></i> ईमेल
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. शेयर प्राप्तकर्ता व्यू मोडल -->
+  <div id="sharedRecipientModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-lg w-full rounded-2xl p-6 space-y-5 border border-slate-700 text-center">
+      
+      <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 text-2xl">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+
+      <h3 class="font-bold text-xl text-slate-100">सुरक्षित साझा दस्तावेज़</h3>
+      <p id="recipientFileDesc" class="text-xs text-slate-400">यह दस्तावेज़ आपके साथ पासवर्ड व समय सीमा सुरक्षा के साथ शेयर किया गया है।</p>
+
+      <div id="recipientPasswordArea" class="hidden space-y-3">
+        <input type="password" id="recipientPasswordInput" placeholder="गुप्त पासवर्ड/पिन दर्ज करें" 
+          class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-center text-slate-100 focus:outline-none focus:border-amber-500">
+        <button onclick="unlockSharedFile()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold py-2.5 rounded-xl transition">
+          अनलाक करें और देखें
+        </button>
+      </div>
+
+      <div id="recipientContentArea" class="hidden space-y-4">
+        <div class="p-4 bg-slate-800/80 rounded-xl border border-slate-700 text-left space-y-1">
+          <p id="sharedRecipientFileName" class="font-semibold text-cyan-400 text-sm">File.pdf</p>
+          <p id="sharedRecipientFileMeta" class="text-xs text-slate-400">0 KB</p>
+        </div>
+
+        <div class="flex gap-3">
+          <button onclick="openViewerForSharedFile()" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white font-medium py-2.5 rounded-xl text-sm transition">
+            <i class="fa-solid fa-eye mr-1"></i> ऑनलाइन देखें
+          </button>
+          <button onclick="downloadSharedFile()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2.5 rounded-xl text-sm border border-slate-700">
+            <i class="fa-solid fa-download mr-1"></i> डाउनलोड करें
+          </button>
         </div>
       </div>
 
@@ -590,7 +717,7 @@
             </div>
 
             <h4 class="font-medium text-slate-200 text-sm truncate mb-1" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</h4>
-            <p class="text-xs text-slate-400">${file.ext.toUpperCase()} • ${formattedSize} • ${formattedDate}</p>
+            <p class="text-xs text-slate-400">${(file.ext || '').toUpperCase()} • ${formattedSize} • ${formattedDate}</p>
           </div>
 
           <div class="flex items-center gap-2 mt-4 pt-3 border-t border-slate-800">
@@ -620,16 +747,25 @@
     }
 
     // --- 3. ड्रॉपज़ोन व अपलोड हैंडलर ---
+    function triggerDirectUpload() {
+      const input = document.getElementById('directFileInput');
+      input.value = '';
+      input.click();
+    }
+
+    async function handleDirectFileSelect(e) {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+      await uploadFilesToDatabase(files);
+    }
+
     function setupDragAndDrop() {
       const dropzone = document.getElementById('dropzone');
-      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropzone.addEventListener(eventName, preventDefaults, false);
-      });
+      if (!dropzone) return;
 
-      function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+      });
 
       ['dragenter', 'dragover'].forEach(eventName => {
         dropzone.addEventListener(eventName, () => dropzone.classList.add('border-cyan-500'), false);
@@ -639,57 +775,19 @@
         dropzone.addEventListener(eventName, () => dropzone.classList.remove('border-cyan-500'), false);
       });
 
-      dropzone.addEventListener('drop', (e) => {
+      dropzone.addEventListener('drop', async (e) => {
         const dt = e.dataTransfer;
         const files = dt.files;
         if (files.length) {
-          selectedUploadFiles = Array.from(files);
-          openUploadModal();
-          renderSelectedFilesList();
+          await uploadFilesToDatabase(Array.from(files));
         }
       });
     }
 
-    function openUploadModal() {
-      document.getElementById('uploadModal').classList.remove('hidden');
-    }
-
-    function closeUploadModal() {
-      document.getElementById('uploadModal').classList.add('hidden');
-      selectedUploadFiles = [];
-      document.getElementById('selectedFilesList').innerHTML = '';
-      document.getElementById('btnStartUpload').disabled = true;
-    }
-
-    function handleFileSelect(e) {
-      const files = Array.from(e.target.files);
-      if (!files.length) return;
-      selectedUploadFiles = files;
-      renderSelectedFilesList();
-    }
-
-    function renderSelectedFilesList() {
-      const listContainer = document.getElementById('selectedFilesList');
-      listContainer.innerHTML = '';
-
-      selectedUploadFiles.forEach((f) => {
-        const item = document.createElement('div');
-        item.className = "flex items-center justify-between p-2 bg-slate-800 rounded-xl text-xs";
-        item.innerHTML = `
-          <span class="truncate font-medium text-slate-200">${escapeHtml(f.name)}</span>
-          <span class="text-slate-400 ml-2">${formatBytes(f.size)}</span>
-        `;
-        listContainer.appendChild(item);
-      });
-
-      document.getElementById('btnStartUpload').disabled = selectedUploadFiles.length === 0;
-    }
-
-    async function processUpload() {
-      if (!selectedUploadFiles.length) return;
-
+    async function uploadFilesToDatabase(filesList) {
+      showToast(`${filesList.length} फ़ाइलें अपलोड हो रही हैं...`, "info");
       try {
-        for (const file of selectedUploadFiles) {
+        for (const file of filesList) {
           const ext = file.name.split('.').pop().toLowerCase();
           let category = 'document';
           
@@ -714,7 +812,6 @@
         }
 
         showToast("फ़ाइलें सफलतापूर्वक सहेजी गईं!", "success");
-        closeUploadModal();
         await loadFilesFromDB();
       } catch (err) {
         showToast("अपलोड करने में त्रुटि: " + err.message, "error");
@@ -728,7 +825,7 @@
 
       currentViewingFile = file;
       document.getElementById('viewerFileName').innerText = file.name;
-      document.getElementById('viewerFileMeta').innerText = `${formatBytes(file.size)} • ${file.ext.toUpperCase()}`;
+      document.getElementById('viewerFileMeta').innerText = `${formatBytes(file.size)} • ${(file.ext || '').toUpperCase()}`;
       
       const iconData = getFileIcon(file.ext, file.category);
       document.getElementById('viewerFileIcon').innerHTML = `<i class="${iconData.icon}"></i>`;
@@ -741,7 +838,7 @@
 
       document.getElementById('viewerModal').classList.remove('hidden');
 
-      const ext = file.ext.toLowerCase();
+      const ext = (file.ext || '').toLowerCase();
 
       // A. इमेज व्यूअर
       if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) {
@@ -895,7 +992,7 @@
     async function saveViewerEdits() {
       if (!currentViewingFile) return;
 
-      const ext = currentViewingFile.ext.toLowerCase();
+      const ext = (currentViewingFile.ext || '').toLowerCase();
 
       if (['xls', 'xlsx', 'csv'].includes(ext)) {
         const table = document.getElementById('excelTable');
@@ -932,17 +1029,16 @@
     // --- 5. स्मार्ट बोर्ड इंजन (Smartboard Engine & Import Support) ---
     function initSmartboard() {
       sbCanvas = document.getElementById('smartboardCanvas');
+      if (!sbCanvas) return;
       sbCtx = sbCanvas.getContext('2d');
 
       window.addEventListener('resize', resizeCanvas);
 
-      // माउस इवेंट्स
       sbCanvas.addEventListener('mousedown', startDrawing);
       sbCanvas.addEventListener('mousemove', draw);
       sbCanvas.addEventListener('mouseup', stopDrawing);
       sbCanvas.addEventListener('mouseout', stopDrawing);
 
-      // टच इवेंट्स (मोबाइल/टैबलेट)
       sbCanvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
         const touch = e.touches[0];
@@ -1099,7 +1195,7 @@
       }
     }
 
-    // स्मार्ट बोर्ड में किसी भी फ़ाइल (Image, PDF, Word, Text) को इम्पॉर्ट करना
+    // स्मार्ट बोर्ड इम्पॉर्ट फंक्शन्स
     async function handleSbDirectImport(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1128,7 +1224,6 @@
     async function importFileToBoardCanvas(arrayBuffer, ext, fileName) {
       ext = (ext || '').toLowerCase();
 
-      // 1. फोटो / इमेजिस
       if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) {
         const blob = new Blob([arrayBuffer]);
         const url = URL.createObjectURL(blob);
@@ -1138,7 +1233,6 @@
         };
         img.src = url;
       }
-      // 2. PDF फ़ाइलें
       else if (ext === 'pdf') {
         try {
           activeSbPdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -1149,7 +1243,6 @@
           showToast("PDF लोड करने में त्रुटि: " + err.message, "error");
         }
       }
-      // 3. Word DOC/DOCX फ़ाइलें
       else if (['docx', 'doc'].includes(ext)) {
         try {
           const res = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
@@ -1158,7 +1251,6 @@
           showToast("Word फ़ाइल पढ़ने में त्रुटि!", "error");
         }
       }
-      // 4. TXT / MD पाठ
       else {
         const textDecoder = new TextDecoder();
         const textContent = textDecoder.decode(arrayBuffer);
@@ -1222,7 +1314,32 @@
       showToast("दस्तावेज़ टेक्स्ट बोर्ड पर लोड हुआ!", "success");
     }
 
-    // --- 10. लाइव स्ट्रीमिंग व ब्रॉडकास्टिंग सेंटर जावास्क्रिप्ट ---
+    async function saveSmartboardToVault() {
+      sbCanvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const arrayBuffer = await blob.arrayBuffer();
+        
+        const fileName = `Smartboard_Notes_${new Date().toISOString().slice(0, 10)}_${Math.floor(Math.random() * 1000)}.png`;
+
+        const newBoardDoc = {
+          id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+          name: fileName,
+          ext: 'png',
+          category: 'smartboard',
+          size: blob.size,
+          type: 'image/png',
+          updatedAt: Date.now(),
+          content: arrayBuffer
+        };
+
+        await db.files.put(newBoardDoc);
+        showToast("स्मार्ट बोर्ड नोट्स वॉल्ट में सहेजे गए!", "success");
+        await loadFilesFromDB();
+        closeSmartboardModal();
+      }, 'image/png');
+    }
+
+    // --- 6. लाइव स्ट्रीमिंग व स्क्रीन शेयरिंग सेंटर ---
     let liveStreamMedia = null;
     let mediaRecorder = null;
     let recordedChunks = [];
@@ -1251,15 +1368,31 @@
         if (type === 'camera') {
           liveStreamMedia = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         } else if (type === 'screen') {
-          liveStreamMedia = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-        } else if (type === 'board') {
-          if (!sbCanvas) initSmartboard();
-          const canvasStream = sbCanvas.captureStream(30);
+          // Screen Sharing with fallback
           try {
-            const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            audioStream.getAudioTracks().forEach(track => canvasStream.addTrack(track));
-          } catch(e) {}
-          liveStreamMedia = canvasStream;
+            liveStreamMedia = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" }, audio: false });
+          } catch(e) {
+            liveStreamMedia = await navigator.mediaDevices.getDisplayMedia({ video: true });
+          }
+        } else if (type === 'board') {
+          openSmartboardModal();
+          setTimeout(async () => {
+            if (!sbCanvas) initSmartboard();
+            resizeCanvas();
+            const canvasStream = sbCanvas.captureStream(30);
+            try {
+              const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              audioStream.getAudioTracks().forEach(track => canvasStream.addTrack(track));
+            } catch(e) {}
+            liveStreamMedia = canvasStream;
+            videoElem.srcObject = liveStreamMedia;
+            placeholder.classList.add('hidden');
+            document.getElementById('liveBadge').classList.remove('hidden');
+            document.getElementById('btnToggleRecord').disabled = false;
+            startStreamTimer();
+            showToast("स्मार्ट बोर्ड लाइव शेयर शुरू हुआ!", "success");
+          }, 200);
+          return;
         }
 
         videoElem.srcObject = liveStreamMedia;
@@ -1320,7 +1453,13 @@
       if (!mediaRecorder || mediaRecorder.state === 'inactive') {
         if (!liveStreamMedia) return;
         recordedChunks = [];
-        mediaRecorder = new MediaRecorder(liveStreamMedia, { mimeType: 'video/webm' });
+        
+        let options = { mimeType: 'video/webm' };
+        if (!MediaRecorder.isTypeSupported('video/webm')) {
+          options = {};
+        }
+
+        mediaRecorder = new MediaRecorder(liveStreamMedia, options);
 
         mediaRecorder.ondataavailable = (e) => {
           if (e.data.size > 0) recordedChunks.push(e.data);
@@ -1403,139 +1542,7 @@
       showToast("लाइव स्ट्रीम लिंक कॉपी हो गया!", "success");
     }
 
-    async function annotateCurrentInSmartboard() {
-      if (!currentViewingFile) return;
-      const file = currentViewingFile;
-      closeViewerModal();
-      openSmartboardModal();
-      setTimeout(async () => {
-        await importFileToBoardCanvas(file.content, file.ext, file.name);
-      }, 200);
-    }
-
-    async function importFileToBoardCanvas(arrayBuffer, ext, fileName) {
-      ext = (ext || '').toLowerCase();
-      showToast(`${fileName} स्मार्ट बोर्ड में इम्पॉर्ट हो रही है...`, "info");
-
-      // 1. फोटो / इमेजिस
-      if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) {
-        const blob = new Blob([arrayBuffer]);
-        const url = URL.createObjectURL(blob);
-        const img = new Image();
-        img.onload = () => {
-          renderImgOnBoard(img);
-        };
-        img.src = url;
-      }
-      // 2. PDF फ़ाइलें
-      else if (ext === 'pdf') {
-        try {
-          activeSbPdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-          activeSbPdfPage = 1;
-          document.getElementById('pdfSbControls').classList.remove('hidden');
-          await renderSbPdfPage(activeSbPdfPage);
-        } catch (err) {
-          showToast("PDF लोड करने में त्रुटि: " + err.message, "error");
-        }
-      }
-      // 3. Word DOC/DOCX फ़ाइलें
-      else if (['docx', 'doc'].includes(ext)) {
-        try {
-          const res = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-          renderTextOnBoard(res.value || "दस्तावेज़ का पाठ उपलब्ध नहीं है।");
-        } catch (err) {
-          showToast("Word फ़ाइल पढ़ने में त्रुटि!", "error");
-        }
-      }
-      // 4. TXT / MD पाठ
-      else {
-        const textDecoder = new TextDecoder();
-        const textContent = textDecoder.decode(arrayBuffer);
-        renderTextOnBoard(textContent);
-      }
-    }
-
-    function renderImgOnBoard(img) {
-      const scale = Math.min(sbCanvas.width / img.width, sbCanvas.height / img.height) * 0.85;
-      const x = (sbCanvas.width - img.width * scale) / 2;
-      const y = (sbCanvas.height - img.height * scale) / 2;
-
-      sbCtx.drawImage(img, x, y, img.width * scale, img.height * scale);
-      showToast("इमेज लोड हुई! अब आप इस पर पेन से लिख सकते हैं।", "success");
-    }
-
-    async function renderSbPdfPage(pageNo) {
-      if (!activeSbPdfDoc) return;
-      const page = await activeSbPdfDoc.getPage(pageNo);
-      const viewport = page.getViewport({ scale: 1.2 });
-
-      const tempCanvas = document.createElement('canvas');
-      const tempCtx = tempCanvas.getContext('2d');
-      tempCanvas.height = viewport.height;
-      tempCanvas.width = viewport.width;
-
-      await page.render({ canvasContext: tempCtx, viewport: viewport }).promise;
-
-      const img = new Image();
-      img.onload = () => {
-        sbCtx.clearRect(0, 0, sbCanvas.width, sbCanvas.height);
-        renderImgOnBoard(img);
-        document.getElementById('sbPdfPageNum').innerText = `${pageNo} / ${activeSbPdfDoc.numPages}`;
-      };
-      img.src = tempCanvas.toDataURL();
-    }
-
-    async function changeSbPdfPage(delta) {
-      if (!activeSbPdfDoc) return;
-      const newPage = activeSbPdfPage + delta;
-      if (newPage >= 1 && newPage <= activeSbPdfDoc.numPages) {
-        activeSbPdfPage = newPage;
-        await renderSbPdfPage(activeSbPdfPage);
-      }
-    }
-
-    function renderTextOnBoard(text) {
-      sbCtx.clearRect(0, 0, sbCanvas.width, sbCanvas.height);
-      sbCtx.fillStyle = "#ffffff";
-      sbCtx.font = "16px sans-serif";
-      
-      const lines = text.split('\n');
-      let y = 40;
-      lines.slice(0, 30).forEach(line => {
-        sbCtx.fillText(line.substring(0, 90), 30, y);
-        y += 24;
-      });
-
-      showToast("दस्तावेज़ टेक्स्ट बोर्ड पर लोड हुआ! आप ऊपर नोट्स लिख सकते हैं।", "success");
-    }
-
-    // स्मार्ट बोर्ड नोट्स वॉल्ट में सहेजें
-    async function saveSmartboardToVault() {
-      sbCanvas.toBlob(async (blob) => {
-        if (!blob) return;
-        const arrayBuffer = await blob.arrayBuffer();
-        
-        const fileName = `Smartboard_Notes_${new Date().toISOString().slice(0, 10)}_${Math.floor(Math.random() * 1000)}.png`;
-
-        const newBoardDoc = {
-          id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-          name: fileName,
-          ext: 'png',
-          category: 'smartboard',
-          size: blob.size,
-          type: 'image/png',
-          updatedAt: Date.now(),
-          content: arrayBuffer
-        };
-
-        await db.files.put(newBoardDoc);
-        showToast("स्मार्ट बोर्ड नोट्स वॉल्ट में सहेजे गए!", "success");
-        await loadFilesFromDB();
-        closeSmartboardModal();
-      }, 'image/png');
-    }
-
-    // --- 6. सुरक्षित शेयर लिंक जनरेटर (Password & Expiry Enforcement) ---
+    // --- 7. सुरक्षित शेयर लिंक जनरेटर (Password & Expiry) ---
     async function openShareModal(fileId) {
       const file = await db.files.get(fileId);
       if (!file) return;
@@ -1564,7 +1571,6 @@
 
       const sharedKey = 'share_' + Math.random().toString(36).substr(2, 9);
 
-      // शेयर डेटा का पेलोड (सटीक समय सीमा + पासवर्ड जानकारी)
       const shareObj = {
         id: sharedKey,
         fileId: currentViewingFile.id,
@@ -1609,7 +1615,7 @@
       showToast("लिंक क्लिपबोर्ड पर कॉपी हो गया!", "success");
     }
 
-    // --- 7. URL Hash से साझा फ़ाइल चेक व पासपोर्ट / एक्सपाईरी सत्यापन ---
+    // --- 8. URL Hash चेक एवं पासवर्ड सत्यापन ---
     async function checkUrlHashForShare() {
       const hash = window.location.hash;
       if (!hash.startsWith('#share=')) return;
@@ -1622,7 +1628,6 @@
         return;
       }
 
-      // 1. Expiry Check (समय सीमा जाँच)
       if (shareData.expiresAt && Date.now() > shareData.expiresAt) {
         document.getElementById('recipientFileDesc').innerText = "❌ यह लिंक समय सीमा (Expiry) समाप्त होने के कारण ब्लॉक हो गई है।";
         document.getElementById('recipientFileDesc').className = "text-xs text-rose-400 font-semibold";
@@ -1640,11 +1645,10 @@
       sharedRecipientFile = file;
       document.getElementById('sharedRecipientModal').classList.remove('hidden');
 
-      // 2. Password Check (पासवर्ड जाँच)
       if (shareData.password) {
         document.getElementById('recipientPasswordArea').classList.remove('hidden');
         document.getElementById('recipientContentArea').classList.add('hidden');
-        document.getElementById('recipientFileDesc').innerText = "🔒 इस दस्तावेज़ को खोलने के लिए जारीकर्ता द्वारा सेट किया गया पासवर्ड दर्ज करें:";
+        document.getElementById('recipientFileDesc').innerText = "🔒 इस दस्तावेज़ को खोलने के लिए पासवर्ड दर्ज करें:";
       } else {
         unlockSharedFileSuccess();
       }
@@ -1666,7 +1670,7 @@
       document.getElementById('recipientPasswordArea').classList.add('hidden');
       document.getElementById('recipientContentArea').classList.remove('hidden');
       document.getElementById('sharedRecipientFileName').innerText = sharedRecipientFile.name;
-      document.getElementById('sharedRecipientFileMeta').innerText = `${formatBytes(sharedRecipientFile.size)} • ${sharedRecipientFile.ext.toUpperCase()}`;
+      document.getElementById('sharedRecipientFileMeta').innerText = `${formatBytes(sharedRecipientFile.size)} • ${(sharedRecipientFile.ext || '').toUpperCase()}`;
     }
 
     function openViewerForSharedFile() {
@@ -1678,7 +1682,7 @@
       downloadFile(sharedRecipientFile.id);
     }
 
-    // --- 8. Gemini AI सहायक Integration ---
+    // --- 9. Gemini AI सहायक Integration ---
     function toggleAiDrawer() {
       const drawer = document.getElementById('aiDrawer');
       drawer.classList.toggle('translate-x-full');
@@ -1761,7 +1765,7 @@
       }
     }
 
-    // --- 9. यूटिलिटीज और हेल्पर फंक्शन्स ---
+    // --- 10. यूटिलिटीज और हेल्पर फंक्शन्स ---
     async function deleteFile(id) {
       if (confirm("क्या आप वाकई इस फ़ाइल को हटाना चाहते हैं?")) {
         await db.files.delete(id);
@@ -1787,7 +1791,7 @@
 
     function handleSearch() {
       const query = document.getElementById('searchInput').value.toLowerCase();
-      const filtered = allFiles.filter(f => f.name.toLowerCase().includes(query) || f.ext.toLowerCase().includes(query));
+      const filtered = allFiles.filter(f => f.name.toLowerCase().includes(query) || (f.ext && f.ext.toLowerCase().includes(query)));
       renderFileList(filtered);
     }
 
@@ -1819,7 +1823,7 @@
     }
 
     function formatBytes(bytes) {
-      if (bytes === 0) return '0 Bytes';
+      if (!bytes || bytes === 0) return '0 Bytes';
       const k = 1024;
       const sizes = ['Bytes', 'KB', 'MB', 'GB'];
       const i = Math.floor(Math.log(bytes) / Math.log(k));
