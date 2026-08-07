@@ -656,6 +656,29 @@
     let imageEditFilter = { brightness: 100, contrast: 100, grayscale: 0, rotate: 0 };
     const apiKey = ""; // Runtime Gemini API Key
 
+    // डाटा प्रारूप रूपांतरण सहायक कार्य (Helper Functions for Data Conversion)
+    async function getContentAsArrayBuffer(content) {
+      if (!content) return new ArrayBuffer(0);
+      if (content instanceof ArrayBuffer) return content;
+      if (content instanceof Blob) return await content.arrayBuffer();
+      if (content.buffer instanceof ArrayBuffer) return content.buffer;
+      return new ArrayBuffer(0);
+    }
+
+    async function getContentAsText(content) {
+      if (!content) return "";
+      if (typeof content === 'string') return content;
+      if (content instanceof Blob) return await content.text();
+      const buffer = await getContentAsArrayBuffer(content);
+      return new TextDecoder().decode(buffer);
+    }
+
+    async function getContentAsBlob(content, mimeType = 'application/octet-stream') {
+      if (content instanceof Blob) return content;
+      if (content instanceof ArrayBuffer) return new Blob([content], { type: mimeType });
+      return new Blob([], { type: mimeType });
+    }
+
     // स्मार्ट बोर्ड स्टेट
     let sbCanvas, sbCtx;
     let isDrawing = false;
@@ -678,13 +701,66 @@
     // --- 2. फ़ाइल लोड एवं फ़िल्टर लॉजिक ---
     async function loadFilesFromDB() {
       try {
-        const rawFiles = await db.files.toArray();
+        let rawFiles = await db.files.toArray();
+        
+        // यदि IndexedDB पहली बार लोड हो रहा है और खाली है, तो डेमो/नमूना फ़ाइलें जोड़ें
+        if (rawFiles.length === 0) {
+          await seedDemoFiles();
+          rawFiles = await db.files.toArray();
+        }
+
         allFiles = rawFiles.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
         updateCategoryCounts();
         renderFileList();
         updateStorageStats();
       } catch (err) {
+        console.error("DB Load Error:", err);
         showToast("डेटाबेस लोड करने में त्रुटि!", "error");
+      }
+    }
+
+    // पहली बार वॉल्ट खाली न दिखे, इसके लिए नमूना/डेमो फ़ाइलें जनरेट करें
+    async function seedDemoFiles() {
+      const encoder = new TextEncoder();
+      const now = Date.now();
+
+      const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect width="100%" height="100%" fill="#0f172a"/><circle cx="300" cy="180" r="80" fill="none" stroke="#06b6d4" stroke-width="6"/><text x="300" y="185" font-family="sans-serif" font-size="20" fill="#38bdf8" text-anchor="middle" font-weight="bold">DocVault AI Smartboard</text><text x="300" y="220" font-family="sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">स्मार्ट बोर्ड लाइव नोट्स उदाहरण</text></svg>`;
+
+      const demoFiles = [
+        {
+          id: 'doc_demo_1',
+          name: 'DocVault AI - उपयोग एवं गाइड.md',
+          ext: 'md',
+          category: 'document',
+          size: 1200,
+          type: 'text/markdown',
+          updatedAt: now - 3600000,
+          content: encoder.encode(`# DocVault AI - त्वरित गाइड\n\n1. **ऑनलाइन प्रिव्यू व एडिटर**: किसी भी फ़ाइल के "देखें / एडिट" बटन पर क्लिक करें।\n2. **स्मार्ट बोर्ड**: ड्राइंग, शेप्स व PDF/DOC/फोटो इम्पॉर्ट करने के लिए "स्मार्ट बोर्ड" बटन दबाएं।\n3. **सुरक्षित शेयरिंग**: एक्सपाईरी टाइम व पासवर्ड सुरक्षा के साथ ऑनलाइन शेयर लिंक जनरेट करें।\n4. **Gemini AI**: फ़ाइल का सारांश व उत्तर पाने के लिए "AI असिस्टेंट" खोलें।`).buffer
+        },
+        {
+          id: 'doc_demo_2',
+          name: 'मासिक बजट एवं व्यय रिपोर्ट 2026.csv',
+          ext: 'csv',
+          category: 'spreadsheet',
+          size: 850,
+          type: 'text/csv',
+          updatedAt: now - 7200000,
+          content: encoder.encode(`मद,जनवरी,फ़रवरी,मार्च,कुल योग\nसॉफ़्टवेयर एवं AI,15000,18000,20000,53000\nक्लाउड स्टोरेज,5000,5000,5000,15000\nमार्केटिंग व विज्ञापन,12000,15000,18000,45000\nकुल बजट,32000,38000,43000,113000`).buffer
+        },
+        {
+          id: 'doc_demo_3',
+          name: 'स्मार्ट बोर्ड गणित व फ़िजिक्स नोट्स.svg',
+          ext: 'svg',
+          category: 'smartboard',
+          size: 2400,
+          type: 'image/svg+xml',
+          updatedAt: now - 10800000,
+          content: encoder.encode(sampleSvg).buffer
+        }
+      ];
+
+      for (const file of demoFiles) {
+        await db.files.put(file);
       }
     }
 
@@ -843,18 +919,17 @@
       else if (expiryChoice === '24h') expiresAt = now + 86400000;
       else if (expiryChoice === '7d') expiresAt = now + 604800000;
 
-      showToast(`${selectedUploadFiles.length} फ़ाइलें सुरक्षित सहेजी जा रही हैं...`, "info");
+      showToast(`${selectedUploadFiles.length} फ़ाइलें सहेजी जा रही हैं...`, "info");
 
       try {
         for (const file of selectedUploadFiles) {
-          const ext = file.name.split('.').pop().toLowerCase();
+          const ext = (file.name.split('.').pop() || '').toLowerCase();
           let category = 'document';
           
           if (['xls', 'xlsx', 'csv'].includes(ext)) category = 'spreadsheet';
           else if (['ppt', 'pptx'].includes(ext)) category = 'presentation';
           else if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'mp3', 'wav', 'ogg', 'mp4', 'webm', 'mkv', 'm4a'].includes(ext)) category = 'media';
 
-          const fileData = await readFileAsArrayBuffer(file);
           const docId = 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
           
           let sharedKey = null;
@@ -869,6 +944,7 @@
             });
           }
 
+          // Directly store the File/Blob in IndexedDB
           const newDoc = {
             id: docId,
             name: file.name,
@@ -880,7 +956,7 @@
             sharedKey: sharedKey,
             password: password,
             expiresAt: expiresAt,
-            content: fileData
+            content: file
           };
 
           await db.files.put(newDoc);
@@ -890,6 +966,7 @@
         closeUploadModal();
         await loadFilesFromDB();
       } catch (err) {
+        console.error("Upload Error:", err);
         showToast("अपलोड में त्रुटि: " + err.message, "error");
       }
     }
@@ -953,7 +1030,7 @@
 
       // A. इमेज व्यूअर
       if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) {
-        const blob = new Blob([file.content], { type: file.type || 'image/png' });
+        const blob = await getContentAsBlob(file.content, file.type || 'image/png');
         const imgUrl = URL.createObjectURL(blob);
 
         viewerBody.innerHTML = `
@@ -972,7 +1049,7 @@
       }
       // B. ऑडियो प्लेयर
       else if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) {
-        const blob = new Blob([file.content], { type: file.type || 'audio/mp3' });
+        const blob = await getContentAsBlob(file.content, file.type || 'audio/mp3');
         const audioUrl = URL.createObjectURL(blob);
 
         viewerBody.innerHTML = `
@@ -989,7 +1066,7 @@
       }
       // C. वीडियो प्लेयर
       else if (['mp4', 'webm', 'mkv'].includes(ext)) {
-        const blob = new Blob([file.content], { type: file.type || 'video/mp4' });
+        const blob = await getContentAsBlob(file.content, file.type || 'video/mp4');
         const videoUrl = URL.createObjectURL(blob);
 
         viewerBody.innerHTML = `
@@ -1003,7 +1080,8 @@
       // D. Excel/Spreadsheet (XLS, XLSX, CSV)
       else if (['xls', 'xlsx', 'csv'].includes(ext)) {
         try {
-          const workbook = XLSX.read(file.content, { type: 'array' });
+          const arrayBuf = await getContentAsArrayBuffer(file.content);
+          const workbook = XLSX.read(arrayBuf, { type: 'array' });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
@@ -1027,7 +1105,8 @@
       // E. PDF Viewer
       else if (['pdf'].includes(ext)) {
         try {
-          const loadingTask = pdfjsLib.getDocument({ data: file.content });
+          const arrayBuf = await getContentAsArrayBuffer(file.content);
+          const loadingTask = pdfjsLib.getDocument({ data: arrayBuf });
           const pdf = await loadingTask.promise;
           
           viewerBody.innerHTML = `<div id="pdfContainer" class="flex flex-col items-center gap-4 overflow-auto max-h-[75vh] w-full p-2"></div>`;
@@ -1054,7 +1133,8 @@
       // F. Word (DOCX)
       else if (['docx', 'doc'].includes(ext)) {
         try {
-          const result = await mammoth.convertToHtml({ arrayBuffer: file.content });
+          const arrayBuf = await getContentAsArrayBuffer(file.content);
+          const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuf });
           viewerBody.innerHTML = `
             <div id="docxEditor" contenteditable="true" class="w-full max-w-3xl bg-slate-900 p-6 rounded-xl border border-slate-800 text-slate-200 text-sm overflow-auto max-h-[70vh] focus:outline-none">
               ${result.value}
@@ -1067,8 +1147,7 @@
       }
       // G. पाठ्य/मार्कडाउन (TXT, MD, JSON)
       else {
-        const textDecoder = new TextDecoder();
-        const textContent = textDecoder.decode(file.content);
+        const textContent = await getContentAsText(file.content);
 
         viewerBody.innerHTML = `
           <textarea id="textEditor" class="w-full h-[70vh] bg-slate-950 p-4 rounded-xl border border-slate-800 text-slate-200 font-mono text-sm focus:outline-none">${escapeHtml(textContent)}</textarea>
@@ -1311,12 +1390,11 @@
       const file = e.target.files[0];
       if (!file) return;
 
-      const ext = file.name.split('.').pop().toLowerCase();
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
       showToast(`${file.name} इम्पॉर्ट हो रही है...`, "info");
       
       try {
-        const fileBuffer = await readFileAsArrayBuffer(file);
-        await importFileToBoardCanvas(fileBuffer, ext, file.name);
+        await importFileToBoardCanvas(file, ext, file.name);
       } catch (err) {
         showToast("फ़ाइल इम्पॉर्ट में त्रुटि: " + err.message, "error");
       }
@@ -1332,11 +1410,11 @@
       }, 300);
     }
 
-    async function importFileToBoardCanvas(arrayBuffer, ext, fileName) {
+    async function importFileToBoardCanvas(fileContent, ext, fileName) {
       ext = (ext || '').toLowerCase();
 
       if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) {
-        const blob = new Blob([arrayBuffer]);
+        const blob = await getContentAsBlob(fileContent);
         const url = URL.createObjectURL(blob);
         const img = new Image();
         img.onload = () => {
@@ -1346,7 +1424,8 @@
       }
       else if (ext === 'pdf') {
         try {
-          activeSbPdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const arrayBuf = await getContentAsArrayBuffer(fileContent);
+          activeSbPdfDoc = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
           activeSbPdfPage = 1;
           document.getElementById('pdfSbControls').classList.remove('hidden');
           await renderSbPdfPage(activeSbPdfPage);
@@ -1356,15 +1435,15 @@
       }
       else if (['docx', 'doc'].includes(ext)) {
         try {
-          const res = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+          const arrayBuf = await getContentAsArrayBuffer(fileContent);
+          const res = await mammoth.extractRawText({ arrayBuffer: arrayBuf });
           renderTextOnBoard(res.value || "दस्तावेज़ का पाठ उपलब्ध नहीं है।");
         } catch (err) {
           showToast("Word फ़ाइल पढ़ने में त्रुटि!", "error");
         }
       }
       else {
-        const textDecoder = new TextDecoder();
-        const textContent = textDecoder.decode(arrayBuffer);
+        const textContent = await getContentAsText(fileContent);
         renderTextOnBoard(textContent);
       }
     }
@@ -1881,7 +1960,7 @@
       const file = await db.files.get(id);
       if (!file) return;
 
-      const blob = new Blob([file.content], { type: file.type || 'application/octet-stream' });
+      const blob = await getContentAsBlob(file.content, file.type || 'application/octet-stream');
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = file.name;
